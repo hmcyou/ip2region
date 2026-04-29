@@ -58,6 +58,10 @@ func NewEditor(version *Version, srcFile string) (*Editor, error) {
 	return e, nil
 }
 
+func (e *Editor) Region(str string) *Region {
+	return e.rgCache.Region(str)
+}
+
 // Load all the segments from the source file
 func (e *Editor) loadSegments() error {
 	var last *Segment = nil
@@ -66,7 +70,7 @@ func (e *Editor) loadSegments() error {
 
 	_, _, iErr := IterateSegments(e.srcHandle, true, func(l string) {
 		// do nothing here
-	}, nil, e.rgCache.Region, func(seg *Segment) error {
+	}, nil, e.Region, func(seg *Segment) error {
 		// version check
 		if len(seg.StartIP) != e.verison.Bytes {
 			return fmt.Errorf("invalid ip segment(%s expected)", e.verison.Name)
