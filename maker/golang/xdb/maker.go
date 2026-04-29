@@ -276,13 +276,13 @@ func (m *Maker) Start() error {
 	slog.Info("try to write the data block ... ")
 	for _, seg := range m.segments {
 		slog.Debug("try to write", "region", seg.Region)
-		ptr, has := m.regionPool[seg.Region]
+		ptr, has := m.regionPool[seg.Region.Str]
 		if has {
 			slog.Debug(" --[Cached]", "ptr=", ptr)
 			continue
 		}
 
-		var region = []byte(seg.Region)
+		var region = []byte(seg.Region.Str)
 		if len(region) > 0xFFFF {
 			return fmt.Errorf("too long region info `%s`: should be less than %d bytes", seg.Region, 0xFFFF)
 		}
@@ -303,7 +303,7 @@ func (m *Maker) Start() error {
 			return fmt.Errorf("write region '%s': %w", seg.Region, err)
 		}
 
-		m.regionPool[seg.Region] = uint32(pos)
+		m.regionPool[seg.Region.Str] = uint32(pos)
 		slog.Debug(" --[Added] with", "ptr", pos)
 	}
 
@@ -312,14 +312,14 @@ func (m *Maker) Start() error {
 	var indexBuff = make([]byte, m.version.SegmentIndexSize)
 	var counter, startIndexPtr, endIndexPtr = 0, int64(-1), int64(-1)
 	for _, seg := range m.segments {
-		dataPtr, has := m.regionPool[seg.Region]
+		dataPtr, has := m.regionPool[seg.Region.Str]
 		if !has {
 			return fmt.Errorf("missing ptr cache for region `%s`", seg.Region)
 		}
 
 		// @Note: data length should be the length of bytes.
 		// this works fine because of the string feature (byte sequence) of golang.
-		var dataLen = len(seg.Region)
+		var dataLen = len(seg.Region.Str)
 		if dataLen < 1 {
 			// @TODO: could this even be a case ?
 			// 	return fmt.Errorf("empty region info for segment '%s'", seg)

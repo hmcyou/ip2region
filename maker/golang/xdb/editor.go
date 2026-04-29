@@ -108,7 +108,7 @@ func (e *Editor) loadSegments() error {
 				e.segments.PushBack(&Segment{
 					StartIP: e.verison.Min,
 					EndIP:   IPSubOne(seg.StartIP),
-					Region:  "",
+					Region:  REmpty(),
 				})
 			}
 		} else if err := seg.RightBehind(last); err == nil {
@@ -121,7 +121,7 @@ func (e *Editor) loadSegments() error {
 			e.segments.PushBack(&Segment{
 				StartIP: IPAddOne(last.EndIP),
 				EndIP:   IPSubOne(seg.StartIP),
-				Region:  "",
+				Region:  REmpty(),
 			})
 		}
 
@@ -138,7 +138,7 @@ func (e *Editor) loadSegments() error {
 			e.segments.PushBack(&Segment{
 				StartIP: IPAddOne(back.Value.(*Segment).EndIP),
 				EndIP:   e.verison.Max,
-				Region:  "",
+				Region:  REmpty(),
 			})
 		}
 	}
@@ -395,7 +395,7 @@ func (e *Editor) SaveToFile(dstFile string) error {
 		}
 
 		// ignore the padded or empty segment
-		if s.Region == "" {
+		if s.Region.IsEmpty() {
 			continue
 		}
 

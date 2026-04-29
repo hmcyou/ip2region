@@ -109,7 +109,7 @@ func Bench(sCmd string) {
 
 			// check the region info
 			count++
-			if r != seg.Region {
+			if r != seg.Region.Str {
 				errCount++
 				slog.Error(" --[Failed] region not match", "src", r, "dst", seg.Region)
 				if !ignoreError {

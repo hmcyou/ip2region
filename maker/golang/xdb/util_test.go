@@ -225,7 +225,7 @@ func TestRegionFiltering(t *testing.T) {
 		t.Fatalf("failed to parse segment '%s': %s", line, err)
 	}
 
-	fReg, err := RegionFiltering(seg.Region, []int{1, 2, 4, 6})
+	fReg, err := seg.Region.Filtering([]int{1, 2, 4, 6})
 	if err != nil {
 		t.Fatalf("failed to filter region '%s': %s", seg.Region, err)
 	}

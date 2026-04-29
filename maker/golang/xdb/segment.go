@@ -12,7 +12,7 @@ import (
 type Segment struct {
 	StartIP []byte
 	EndIP   []byte
-	Region  string
+	Region  *Region
 }
 
 func SegmentFrom(seg string) (*Segment, error) {
@@ -38,7 +38,7 @@ func SegmentFrom(seg string) (*Segment, error) {
 	return &Segment{
 		StartIP: sip,
 		EndIP:   eip,
-		Region:  ps[2],
+		Region:  RNew(ps[2]),
 	}, nil
 }
 
