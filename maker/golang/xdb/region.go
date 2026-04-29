@@ -3,31 +3,32 @@ package xdb
 import (
 	"fmt"
 	"strings"
+	"sync"
 )
 
 // region manager with:
 // 1, content cache.
 // 2, util functions
 
+// global cache map
+var rcLock sync.Mutex
+var regionCache = map[string]*Region{}
+
 type Region struct {
 	Str    string   // region string
 	fields []string // region fields
 }
 
-// global cache map
-var regionCache = map[string]*Region{}
+var EmptyRegion = CacheRegion("")
 
-func RNew(str string) *Region {
-	return NewRegion(str)
-}
-
-func REmpty() *Region {
-	return NewRegion("")
-}
-
-func NewRegion(str string) *Region {
+// Create or get the region from the global cache.
+// And it is a thread-safe implementation.
+func CacheRegion(str string) *Region {
 	// check the cache and return it directly
 	// if there is a cache available
+	rcLock.Lock()
+	defer rcLock.Unlock()
+
 	region, ok := regionCache[str]
 	if ok {
 		return region
@@ -43,6 +44,14 @@ func NewRegion(str string) *Region {
 	return region
 }
 
+// Create a new region without checking cache info
+func NewRegion(str string) *Region {
+	return &Region{
+		Str:    str,
+		fields: nil,
+	}
+}
+
 func (r *Region) Fields() []string {
 	if r.fields == nil {
 		r.fields = strings.Split(r.Str, "|")
@@ -51,7 +60,7 @@ func (r *Region) Fields() []string {
 	return r.fields
 }
 
-func (r *Region) JoinBy(sep string) string {
+func (r *Region) Join(sep string) string {
 	if sep == "|" {
 		return r.Str
 	}
@@ -78,7 +87,7 @@ func (r *Region) Filtering(fields []int) (*Region, error) {
 		sb = append(sb, fs[idx])
 	}
 
-	new := RNew(strings.Join(sb, "|"))
+	new := CacheRegion(strings.Join(sb, "|"))
 	if new.fields == nil {
 		new.fields = sb
 	}

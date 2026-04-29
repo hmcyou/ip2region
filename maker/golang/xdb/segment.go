@@ -38,7 +38,7 @@ func SegmentFrom(seg string) (*Segment, error) {
 	return &Segment{
 		StartIP: sip,
 		EndIP:   eip,
-		Region:  RNew(ps[2]),
+		Region:  CacheRegion(ps[2]),
 	}, nil
 }
 

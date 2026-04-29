@@ -200,7 +200,7 @@ func IterateSegments(handle *os.File, autoMerge bool, before func(l string), fil
 		var seg = &Segment{
 			StartIP: sip,
 			EndIP:   eip,
-			Region:  RNew(region),
+			Region:  CacheRegion(region),
 		}
 
 		// check and automatic merging the Consecutive Segments, which means:
