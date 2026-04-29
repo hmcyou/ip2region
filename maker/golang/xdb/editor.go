@@ -416,4 +416,5 @@ func (e *Editor) SaveToFile(dstFile string) error {
 
 func (e *Editor) Close() {
 	_ = e.srcHandle.Close()
+	e.rgCache.Clean()
 }

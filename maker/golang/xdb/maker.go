@@ -414,5 +414,7 @@ func (m *Maker) End() error {
 		return err
 	}
 
+	m.regionCache.Clean()
+
 	return nil
 }

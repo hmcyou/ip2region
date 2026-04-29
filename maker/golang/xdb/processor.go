@@ -156,5 +156,7 @@ func (p *Processor) End() error {
 		return err
 	}
 
+	p.rgCache.Clean()
+
 	return nil
 }

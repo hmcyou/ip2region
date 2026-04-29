@@ -93,6 +93,8 @@ func Bench(sCmd string) {
 	defer handle.Close()
 
 	var rgCache = xdb.NewRegionCache()
+	defer rgCache.Clean()
+
 	var count, errCount, tStart = 0, 0, time.Now()
 	slog.Info("Bench start", "xdbPath", dbFile, "srcPath", srcFile)
 	_, _, iErr := xdb.IterateSegments(handle, false, func(l string) {
