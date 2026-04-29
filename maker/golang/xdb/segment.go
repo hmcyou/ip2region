@@ -12,10 +12,10 @@ import (
 type Segment struct {
 	StartIP []byte
 	EndIP   []byte
-	Region  string
+	Region  *Region
 }
 
-func SegmentFrom(seg string) (*Segment, error) {
+func SegmentFrom(seg string, cRegion func(string) *Region) (*Segment, error) {
 	var ps = strings.SplitN(strings.TrimSpace(seg), "|", 3)
 	if len(ps) != 3 {
 		return nil, fmt.Errorf("invalid ip segment `%s`", seg)
@@ -38,7 +38,7 @@ func SegmentFrom(seg string) (*Segment, error) {
 	return &Segment{
 		StartIP: sip,
 		EndIP:   eip,
-		Region:  ps[2],
+		Region:  cRegion(ps[2]),
 	}, nil
 }
 

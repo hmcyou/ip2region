@@ -90,12 +90,16 @@ func Bench(sCmd string) {
 		fmt.Printf("failed to open source text file: %s\n", err)
 		return
 	}
-
 	defer handle.Close()
+
+	var rgCache = xdb.NewRegionCache()
+	defer rgCache.Clean()
 
 	var count, errCount, tStart = 0, 0, time.Now()
 	slog.Info("Bench start", "xdbPath", dbFile, "srcPath", srcFile)
-	_, _, iErr := xdb.IterateSegments(handle, false, nil, nil, func(seg *xdb.Segment) error {
+	_, _, iErr := xdb.IterateSegments(handle, false, func(l string) {
+		// do thing here
+	}, nil, rgCache.Region, func(seg *xdb.Segment) error {
 		var l = fmt.Sprintf("%d|%d|%s", seg.StartIP, seg.EndIP, seg.Region)
 		slog.Debug("try to bench", "segment", l)
 		// mip := xdb.IPMiddle(seg.StartIP, seg.EndIP)
@@ -109,7 +113,7 @@ func Bench(sCmd string) {
 
 			// check the region info
 			count++
-			if r != seg.Region {
+			if r != seg.Region.Str {
 				errCount++
 				slog.Error(" --[Failed] region not match", "src", r, "dst", seg.Region)
 				if !ignoreError {

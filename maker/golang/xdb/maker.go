@@ -84,6 +84,7 @@ type Maker struct {
 	indexPolicy IndexPolicy
 	segments    []*Segment
 	regionPool  map[string]uint32
+	regionCache *RegionCache
 	vectorIndex []byte
 }
 
@@ -118,6 +119,7 @@ func NewMaker(version *Version, policy IndexPolicy, srcFile string, dstFile stri
 		indexPolicy: policy,
 		segments:    []*Segment{},
 		regionPool:  map[string]uint32{},
+		regionCache: NewRegionCache(),
 		vectorIndex: make([]byte, VectorIndexLength),
 	}, nil
 }
@@ -173,7 +175,7 @@ func (m *Maker) loadSegments() error {
 	}, func(region string) (string, error) {
 		// apply the field filter
 		return RegionFiltering(region, m.fields)
-	}, func(seg *Segment) error {
+	}, m.regionCache.Region, func(seg *Segment) error {
 		// ip version check
 		if len(seg.StartIP) != m.version.Bytes {
 			return fmt.Errorf("invalid ip segment(%s expected)", m.version.Name)
@@ -276,13 +278,13 @@ func (m *Maker) Start() error {
 	slog.Info("try to write the data block ... ")
 	for _, seg := range m.segments {
 		slog.Debug("try to write", "region", seg.Region)
-		ptr, has := m.regionPool[seg.Region]
+		ptr, has := m.regionPool[seg.Region.Str]
 		if has {
 			slog.Debug(" --[Cached]", "ptr=", ptr)
 			continue
 		}
 
-		var region = []byte(seg.Region)
+		var region = []byte(seg.Region.Str)
 		if len(region) > 0xFFFF {
 			return fmt.Errorf("too long region info `%s`: should be less than %d bytes", seg.Region, 0xFFFF)
 		}
@@ -303,7 +305,7 @@ func (m *Maker) Start() error {
 			return fmt.Errorf("write region '%s': %w", seg.Region, err)
 		}
 
-		m.regionPool[seg.Region] = uint32(pos)
+		m.regionPool[seg.Region.Str] = uint32(pos)
 		slog.Debug(" --[Added] with", "ptr", pos)
 	}
 
@@ -312,14 +314,14 @@ func (m *Maker) Start() error {
 	var indexBuff = make([]byte, m.version.SegmentIndexSize)
 	var counter, startIndexPtr, endIndexPtr = 0, int64(-1), int64(-1)
 	for _, seg := range m.segments {
-		dataPtr, has := m.regionPool[seg.Region]
+		dataPtr, has := m.regionPool[seg.Region.Str]
 		if !has {
 			return fmt.Errorf("missing ptr cache for region `%s`", seg.Region)
 		}
 
 		// @Note: data length should be the length of bytes.
 		// this works fine because of the string feature (byte sequence) of golang.
-		var dataLen = len(seg.Region)
+		var dataLen = len(seg.Region.Str)
 		if dataLen < 1 {
 			// @TODO: could this even be a case ?
 			// 	return fmt.Errorf("empty region info for segment '%s'", seg)
@@ -411,6 +413,8 @@ func (m *Maker) End() error {
 	if err != nil {
 		return err
 	}
+
+	m.regionCache.Clean()
 
 	return nil
 }

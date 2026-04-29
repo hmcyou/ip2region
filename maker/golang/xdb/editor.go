@@ -24,6 +24,9 @@ type Editor struct {
 
 	// segments list
 	segments *list.List
+
+	// region cache
+	rgCache *RegionCache
 }
 
 func NewEditor(version *Version, srcFile string) (*Editor, error) {
@@ -44,6 +47,7 @@ func NewEditor(version *Version, srcFile string) (*Editor, error) {
 		srcHandle: srcHandle,
 		toSave:    false,
 		segments:  list.New(),
+		rgCache:   NewRegionCache(),
 	}
 
 	// load the segments
@@ -54,6 +58,10 @@ func NewEditor(version *Version, srcFile string) (*Editor, error) {
 	return e, nil
 }
 
+func (e *Editor) Region(str string) *Region {
+	return e.rgCache.Region(str)
+}
+
 // Load all the segments from the source file
 func (e *Editor) loadSegments() error {
 	var last *Segment = nil
@@ -62,7 +70,7 @@ func (e *Editor) loadSegments() error {
 
 	_, _, iErr := IterateSegments(e.srcHandle, true, func(l string) {
 		// do nothing here
-	}, nil, func(seg *Segment) error {
+	}, nil, e.Region, func(seg *Segment) error {
 		// version check
 		if len(seg.StartIP) != e.verison.Bytes {
 			return fmt.Errorf("invalid ip segment(%s expected)", e.verison.Name)
@@ -100,15 +108,12 @@ func (e *Editor) loadSegments() error {
 	// to Keep the entire data continuous.
 	last = nil
 	for _, seg := range segments {
-		if err := seg.After(last); err != nil {
-		}
-
 		if last == nil {
 			if IPCompare(seg.StartIP, e.verison.Min) > 0 {
 				e.segments.PushBack(&Segment{
 					StartIP: e.verison.Min,
 					EndIP:   IPSubOne(seg.StartIP),
-					Region:  "",
+					Region:  EmptyRegion,
 				})
 			}
 		} else if err := seg.RightBehind(last); err == nil {
@@ -121,7 +126,7 @@ func (e *Editor) loadSegments() error {
 			e.segments.PushBack(&Segment{
 				StartIP: IPAddOne(last.EndIP),
 				EndIP:   IPSubOne(seg.StartIP),
-				Region:  "",
+				Region:  EmptyRegion,
 			})
 		}
 
@@ -138,7 +143,7 @@ func (e *Editor) loadSegments() error {
 			e.segments.PushBack(&Segment{
 				StartIP: IPAddOne(back.Value.(*Segment).EndIP),
 				EndIP:   e.verison.Max,
-				Region:  "",
+				Region:  EmptyRegion,
 			})
 		}
 	}
@@ -182,7 +187,7 @@ func (e *Editor) Slice(offset int, size int) []*Segment {
 }
 
 func (e *Editor) Put(ip string, cb func(newSeg *Segment, oldList []*Segment) []*Segment) (int, int, error) {
-	seg, err := SegmentFrom(ip)
+	seg, err := SegmentFrom(ip, e.rgCache.Region)
 	if err != nil {
 		return 0, 0, err
 	}
@@ -350,7 +355,7 @@ func (e *Editor) PutFile(src string, cb func(newSeg *Segment, oldList []*Segment
 	var oldRows, newRows = 0, 0
 	_, _, iErr := IterateSegments(handle, true, func(l string) {
 		// do nothing here
-	}, nil, func(seg *Segment) error {
+	}, nil, NewRegion, func(seg *Segment) error {
 		o, n, err := e.PutSegment(seg, cb)
 		if err == nil {
 			oldRows += o
@@ -395,7 +400,7 @@ func (e *Editor) SaveToFile(dstFile string) error {
 		}
 
 		// ignore the padded or empty segment
-		if s.Region == "" {
+		if s.Region.IsEmpty() {
 			continue
 		}
 
@@ -415,4 +420,5 @@ func (e *Editor) SaveToFile(dstFile string) error {
 
 func (e *Editor) Close() {
 	_ = e.srcHandle.Close()
+	e.rgCache.Clean()
 }
