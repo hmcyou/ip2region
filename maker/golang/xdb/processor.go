@@ -26,6 +26,9 @@ type Processor struct {
 
 	fields   []int
 	segments []*Segment
+
+	// region cache
+	rgCache *RegionCache
 }
 
 func NewProcessor(srcFile string, dstFile string, fields []int,
@@ -55,6 +58,7 @@ func NewProcessor(srcFile string, dstFile string, fields []int,
 		fields: fields,
 
 		segments: []*Segment{},
+		rgCache:  NewRegionCache(),
 	}, nil
 }
 
@@ -94,7 +98,7 @@ func (p *Processor) loadSegments() error {
 		}
 
 		return RegionFiltering(region, p.fields)
-	}, func(seg *Segment) error {
+	}, p.rgCache.Region, func(seg *Segment) error {
 		// check the continuity of the data segment
 		// if err := seg.AfterCheck(last); err != nil {
 		// 	return err

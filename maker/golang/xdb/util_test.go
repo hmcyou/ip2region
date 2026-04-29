@@ -201,7 +201,7 @@ func TestSplitSegmentV4(t *testing.T) {
 	// var str = "0.0.0.0|1.255.225.254|0|0|0|内网IP|内网IP"
 	// var str = "29.0.0.0|29.34.191.255|美国|0|0|0|0"
 	var str = "28.201.224.0|29.34.191.255|美国|0|0|0|0"
-	seg, err := SegmentFrom(str)
+	seg, err := SegmentFrom(str, NewRegion)
 	if err != nil {
 		t.Fatalf("failed to parser segment '%s': %s", str, err)
 	}
@@ -220,7 +220,7 @@ func TestSplitSegmentV4(t *testing.T) {
 
 func TestRegionFiltering(t *testing.T) {
 	var line = "2001:1203:31:8000::|2001:1203:31:bfff:ffff:ffff:ffff:ffff||墨西哥|瓜纳华托州||||专线用户|"
-	seg, err := SegmentFrom(line)
+	seg, err := SegmentFrom(line, NewRegion)
 	if err != nil {
 		t.Fatalf("failed to parse segment '%s': %s", line, err)
 	}
@@ -235,7 +235,7 @@ func TestRegionFiltering(t *testing.T) {
 
 func TestSplitSegmentV6(t *testing.T) {
 	var str = "fec0::|ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff||瑞士|弗里堡州||||专线用户|IANA"
-	seg, err := SegmentFrom(str)
+	seg, err := SegmentFrom(str, NewRegion)
 	if err != nil {
 		t.Fatalf("failed to parser segment '%s': %s", str, err)
 	}
@@ -260,7 +260,7 @@ func TestIterateSegments(t *testing.T) {
 
 	_, _, _ = IterateSegments(handle, true, func(l string) {
 		// fmt.Printf("load segment: `%s`\n", l)
-	}, nil, func(seg *Segment) error {
+	}, nil, NewRegion, func(seg *Segment) error {
 		fmt.Printf("get segment: `%s`\n", seg)
 		return nil
 	})

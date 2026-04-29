@@ -24,6 +24,9 @@ type Editor struct {
 
 	// segments list
 	segments *list.List
+
+	// region cache
+	rgCache *RegionCache
 }
 
 func NewEditor(version *Version, srcFile string) (*Editor, error) {
@@ -44,6 +47,7 @@ func NewEditor(version *Version, srcFile string) (*Editor, error) {
 		srcHandle: srcHandle,
 		toSave:    false,
 		segments:  list.New(),
+		rgCache:   NewRegionCache(),
 	}
 
 	// load the segments
@@ -62,7 +66,7 @@ func (e *Editor) loadSegments() error {
 
 	_, _, iErr := IterateSegments(e.srcHandle, true, func(l string) {
 		// do nothing here
-	}, nil, func(seg *Segment) error {
+	}, nil, e.rgCache.Region, func(seg *Segment) error {
 		// version check
 		if len(seg.StartIP) != e.verison.Bytes {
 			return fmt.Errorf("invalid ip segment(%s expected)", e.verison.Name)
@@ -100,9 +104,6 @@ func (e *Editor) loadSegments() error {
 	// to Keep the entire data continuous.
 	last = nil
 	for _, seg := range segments {
-		if err := seg.After(last); err != nil {
-		}
-
 		if last == nil {
 			if IPCompare(seg.StartIP, e.verison.Min) > 0 {
 				e.segments.PushBack(&Segment{
@@ -182,7 +183,7 @@ func (e *Editor) Slice(offset int, size int) []*Segment {
 }
 
 func (e *Editor) Put(ip string, cb func(newSeg *Segment, oldList []*Segment) []*Segment) (int, int, error) {
-	seg, err := SegmentFrom(ip)
+	seg, err := SegmentFrom(ip, e.rgCache.Region)
 	if err != nil {
 		return 0, 0, err
 	}
@@ -350,7 +351,7 @@ func (e *Editor) PutFile(src string, cb func(newSeg *Segment, oldList []*Segment
 	var oldRows, newRows = 0, 0
 	_, _, iErr := IterateSegments(handle, true, func(l string) {
 		// do nothing here
-	}, nil, func(seg *Segment) error {
+	}, nil, NewRegion, func(seg *Segment) error {
 		o, n, err := e.PutSegment(seg, cb)
 		if err == nil {
 			oldRows += o

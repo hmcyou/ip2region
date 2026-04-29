@@ -10,39 +10,14 @@ import (
 // 1, content cache.
 // 2, util functions
 
-// global cache map
-var rcLock sync.Mutex
-var regionCache = map[string]*Region{}
+// --- region
 
 type Region struct {
 	Str    string   // region string
 	fields []string // region fields
 }
 
-var EmptyRegion = CacheRegion("")
-
-// Create or get the region from the global cache.
-// And it is a thread-safe implementation.
-func CacheRegion(str string) *Region {
-	// check the cache and return it directly
-	// if there is a cache available
-	rcLock.Lock()
-	defer rcLock.Unlock()
-
-	region, ok := regionCache[str]
-	if ok {
-		return region
-	}
-
-	// cache the new region
-	region = &Region{
-		Str:    str,
-		fields: nil,
-	}
-
-	regionCache[str] = region
-	return region
-}
+var EmptyRegion = NewRegion("")
 
 // Create a new region without checking cache info
 func NewRegion(str string) *Region {
@@ -87,12 +62,10 @@ func (r *Region) Filtering(fields []int) (*Region, error) {
 		sb = append(sb, fs[idx])
 	}
 
-	new := CacheRegion(strings.Join(sb, "|"))
-	if new.fields == nil {
-		new.fields = sb
-	}
-
-	return new, nil
+	return &Region{
+		Str:    strings.Join(sb, "|"),
+		fields: sb,
+	}, nil
 }
 
 // Equal check ptr (share the same region cache) or the Str is the same.
@@ -106,4 +79,51 @@ func (r *Region) IsEmpty() bool {
 
 func (r *Region) String() string {
 	return r.Str
+}
+
+// ---
+// --- region cache
+
+type RegionCache struct {
+	lock  sync.Mutex
+	cache map[string]*Region
+}
+
+func NewRegionCache() *RegionCache {
+	return &RegionCache{
+		lock:  sync.Mutex{},
+		cache: make(map[string]*Region),
+	}
+}
+
+func (rc *RegionCache) Region(str string) *Region {
+	rc.lock.Lock()
+	defer rc.lock.Unlock()
+
+	region, ok := rc.cache[str]
+	if ok {
+		return region
+	}
+
+	// cache the new region
+	region = &Region{
+		Str:    str,
+		fields: nil,
+	}
+
+	rc.cache[str] = region
+	return region
+}
+
+func (rc *RegionCache) Swap(r *Region) *Region {
+	return rc.Region(r.Str)
+}
+
+func (rc *RegionCache) Clean() {
+	rc.lock.Lock()
+	defer rc.lock.Unlock()
+
+	for k := range rc.cache {
+		delete(rc.cache, k)
+	}
 }

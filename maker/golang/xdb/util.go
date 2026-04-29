@@ -140,7 +140,7 @@ func IPMiddle(sip, eip []byte) ([]byte, error) {
 	return IPHalf(buf), nil
 }
 
-func IterateSegments(handle *os.File, autoMerge bool, before func(l string), filter func(region string) (string, error), done func(seg *Segment) error) (int, int, error) {
+func IterateSegments(handle *os.File, autoMerge bool, before func(l string), filter func(region string) (string, error), cRegion func(string) *Region, done func(seg *Segment) error) (int, int, error) {
 	var last *Segment = nil
 	var totalCount, mergeCount = 0, 0
 	var scanner = bufio.NewScanner(handle)
@@ -193,14 +193,14 @@ func IterateSegments(handle *os.File, autoMerge bool, before func(l string), fil
 		if filter != nil {
 			region, err = filter(ps[2])
 			if err != nil {
-				return totalCount, mergeCount, fmt.Errorf("failed to filter region `%s`: %s", ps[2], err)
+				return totalCount, mergeCount, fmt.Errorf("failed to filter region `%s`: %s", region, err)
 			}
 		}
 
 		var seg = &Segment{
 			StartIP: sip,
 			EndIP:   eip,
-			Region:  CacheRegion(region),
+			Region:  cRegion(region),
 		}
 
 		// check and automatic merging the Consecutive Segments, which means:

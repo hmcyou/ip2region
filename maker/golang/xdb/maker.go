@@ -84,6 +84,7 @@ type Maker struct {
 	indexPolicy IndexPolicy
 	segments    []*Segment
 	regionPool  map[string]uint32
+	regionCache *RegionCache
 	vectorIndex []byte
 }
 
@@ -118,6 +119,7 @@ func NewMaker(version *Version, policy IndexPolicy, srcFile string, dstFile stri
 		indexPolicy: policy,
 		segments:    []*Segment{},
 		regionPool:  map[string]uint32{},
+		regionCache: NewRegionCache(),
 		vectorIndex: make([]byte, VectorIndexLength),
 	}, nil
 }
@@ -173,7 +175,7 @@ func (m *Maker) loadSegments() error {
 	}, func(region string) (string, error) {
 		// apply the field filter
 		return RegionFiltering(region, m.fields)
-	}, func(seg *Segment) error {
+	}, m.regionCache.Region, func(seg *Segment) error {
 		// ip version check
 		if len(seg.StartIP) != m.version.Bytes {
 			return fmt.Errorf("invalid ip segment(%s expected)", m.version.Name)
